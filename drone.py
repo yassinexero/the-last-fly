@@ -46,5 +46,10 @@ class Drone:
         Returns:
             str: Drone description.
         """
-        location = self.current_zone.name if self.current_zone else "In-Transit"
-        return f"Drone({self.name}, location={location}, delivered={self.is_delivered})"
+        loc = (
+            self.current_zone.name if self.current_zone else "In-Transit"
+        )
+        return (
+            f"Drone({self.name}, location={loc}, "
+            f"delivered={self.is_delivered})"
+        )

@@ -64,7 +64,7 @@ class Zone:
         """Get effective capacity limit of the zone.
 
         Returns:
-            float: Capacity limit (infinity for start/end, max_drones otherwise).
+            float: Capacity limit (infinity for start/end, max_drones).
         """
         if self.is_start or self.is_end:
             return float("inf")
@@ -84,4 +84,5 @@ class Zone:
         Returns:
             str: Zone description.
         """
-        return f"Zone({self.name}, type={self.zone_type.value}, cap={self.max_drones})"
+        zt = self.zone_type.value
+        return f"Zone({self.name}, type={zt}, cap={self.max_drones})"

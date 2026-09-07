@@ -38,7 +38,7 @@ def parse_arguments(args: Optional[List[str]] = None) -> argparse.Namespace:
         "-c",
         "--capacity-info",
         action="store_true",
-        help="Display zone and connection capacity information during simulation.",
+        help="Display capacity information during simulation.",
     )
     parser.add_argument(
         "-q",
@@ -70,13 +70,17 @@ def run_simulation(
         if visual_mode:
             print("\n=== STARTING SIMULATION ===")
             for idx, turn_line in enumerate(result.turn_lines, start=1):
-                rendered = TerminalVisualizer.render_turn(idx, turn_line, graph)
+                rendered = TerminalVisualizer.render_turn(
+                    idx, turn_line, graph
+                )
                 print(rendered)
                 if capacity_info and idx <= len(result.capacity_lines):
                     cap_info = result.capacity_lines[idx - 1]
                     if cap_info:
                         print(f"   [Capacity] {cap_info}")
-            TerminalVisualizer.print_summary(result.total_turns, graph.nb_drones)
+            TerminalVisualizer.print_summary(
+                result.total_turns, graph.nb_drones
+            )
         else:
             print(result.format_output(show_capacity=capacity_info))
 

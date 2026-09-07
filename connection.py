@@ -6,7 +6,9 @@ from zone import Zone
 class Connection:
     """Represents a connection (edge) between two zones in the graph."""
 
-    def __init__(self, zone1: Zone, zone2: Zone, max_link_capacity: int = 1) -> None:
+    def __init__(
+        self, zone1: Zone, zone2: Zone, max_link_capacity: int = 1
+    ) -> None:
         """Initialize a Connection instance.
 
         Args:
@@ -44,7 +46,8 @@ class Connection:
             return self.zone2
         elif zone == self.zone2:
             return self.zone1
-        raise ValueError(f"Zone {zone.name} is not part of connection {self.name}")
+        err_msg = f"Zone {zone.name} is not part of connection {self.name}"
+        raise ValueError(err_msg)
 
     def connects(self, zone_a: Zone, zone_b: Zone) -> bool:
         """Check if connection connects the two specified zones.

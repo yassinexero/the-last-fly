@@ -11,7 +11,9 @@ from graph import Graph
 class Path:
     """Represents a path from start_hub to end_hub in the graph."""
 
-    def __init__(self, nodes: List[Zone], connections: List[Connection]) -> None:
+    def __init__(
+        self, nodes: List[Zone], connections: List[Connection]
+    ) -> None:
         """Initialize a Path instance.
 
         Args:
@@ -99,7 +101,7 @@ class Pathfinder:
         start = self.graph.start_zone
         end = self.graph.end_zone
 
-        # Priority Queue for BFS: (score, turn_cost, current_name, nodes, conns)
+        # Priority Queue: (score, turn_cost, name, nodes, conns)
         queue: List[Tuple[float, int, str, List[Zone], List[Connection]]] = []
         heapq.heappush(queue, (0.0, 0, start.name, [start], []))
 
@@ -115,14 +117,17 @@ class Pathfinder:
             if score > visited.get(current_name, float("inf")):
                 continue
 
-            for neighbor, connection in self.graph.get_neighbors(current_zone):
-                if neighbor.name in ignored_n or connection.name in ignored_e:
+            for neighbor, conn in self.graph.get_neighbors(current_zone):
+                if neighbor.name in ignored_n or conn.name in ignored_e:
                     continue
                 if not neighbor.is_passable():
                     continue
 
                 step_cost = neighbor.zone_type.movement_cost
-                step_score = 0.9 if neighbor.zone_type == ZoneType.PRIORITY else float(step_cost)
+                if neighbor.zone_type == ZoneType.PRIORITY:
+                    step_score = 0.9
+                else:
+                    step_score = float(step_cost)
 
                 new_score = score + step_score
                 new_turn_cost = turn_cost + step_cost
@@ -136,20 +141,20 @@ class Pathfinder:
                             new_turn_cost,
                             neighbor.name,
                             nodes + [neighbor],
-                            conns + [connection],
+                            conns + [conn],
                         ),
                     )
 
         return None
 
     def find_multiple_paths(self, max_paths: int = 5) -> List[Path]:
-        """Discover multiple distinct or edge-disjoint paths using BFS iterations.
+        """Discover multiple paths using BFS iterations.
 
         Args:
             max_paths: Maximum number of paths to find.
 
         Returns:
-            List[Path]: List of available paths sorted by cost and priority.
+            List[Path]: List of available paths sorted by priority.
         """
         paths: List[Path] = []
         ignored_edges: Set[str] = set()
@@ -159,11 +164,11 @@ class Pathfinder:
         if primary:
             paths.append(primary)
 
-        # Iteratively search for alternate paths by temporarily removing bottleneck edges
+        # Iteratively search for alternate paths
         for _ in range(max_paths - 1):
             if not paths:
                 break
-            # Ignore edges of the last found path except connections at start/end if shared
+            # Ignore edges of the last found path
             last_path = paths[-1]
             for conn in last_path.connections:
                 ignored_edges.add(conn.name)
@@ -181,7 +186,7 @@ class Pathfinder:
     def allocate_drones_to_paths(
         self, drones: List[Drone], paths: List[Path]
     ) -> Dict[int, Path]:
-        """Equitably assign drones to paths to minimize total simulation turns.
+        """Equitably assign drones to paths to minimize total turns.
 
         Args:
             drones: List of Drone objects to route.
@@ -194,7 +199,7 @@ class Pathfinder:
         if not paths or not drones:
             return allocation
 
-        # Track effective total turns required for each path as drones are added
+        # Track effective total turns required for each path
         path_loads: List[int] = [p.total_cost for p in paths]
 
         for drone in drones:

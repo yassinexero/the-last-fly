@@ -21,7 +21,7 @@ class SimulationResult:
         Args:
             turn_lines: Output lines formatted per simulation turn.
             total_turns: Total turn count required to deliver all drones.
-            capacity_lines: Optional capacity usage breakdown lines per turn.
+            capacity_lines: Optional capacity breakdown lines per turn.
         """
         self.turn_lines: List[str] = turn_lines
         self.total_turns: int = total_turns
@@ -68,7 +68,7 @@ class SimulationEngine:
         """Run simulation until all drones reach the end zone.
 
         Returns:
-            SimulationResult: Container holding turn output lines and total turns.
+            SimulationResult: Outcome container with turns and output.
 
         Raises:
             RuntimeError: If no valid paths exist to route drones.
@@ -78,18 +78,25 @@ class SimulationEngine:
 
         paths = self.pathfinder.find_multiple_paths()
         if not paths:
-            raise RuntimeError("No valid path exists from start_hub to end_hub")
+            msg = "No valid path exists from start_hub to end_hub"
+            raise RuntimeError(msg)
 
-        drone_paths = self.pathfinder.allocate_drones_to_paths(self.drones, paths)
+        drone_paths = self.pathfinder.allocate_drones_to_paths(
+            self.drones, paths
+        )
         drone_indices: Dict[int, int] = {d.drone_id: 0 for d in self.drones}
 
         # Track zone & connection occupancies
-        zone_occupancy: Dict[str, Set[int]] = {z_name: set() for z_name in self.graph.zones}
+        zone_occupancy: Dict[str, Set[int]] = {
+            z_name: set() for z_name in self.graph.zones
+        }
         start_name = self.graph.start_zone.name
         for d in self.drones:
             zone_occupancy[start_name].add(d.drone_id)
 
-        conn_occupancy: Dict[str, Set[int]] = {c.name: set() for c in self.graph.connections}
+        conn_occupancy: Dict[str, Set[int]] = {
+            c.name: set() for c in self.graph.connections
+        }
 
         turn_lines: List[str] = []
         capacity_lines: List[str] = []
@@ -98,13 +105,20 @@ class SimulationEngine:
         # Safety loop cap to prevent infinite loops on deadlocks
         max_turns_limit = 10000
 
-        while not all(d.is_delivered for d in self.drones) and turn_count < max_turns_limit:
+        while (
+            not all(d.is_delivered for d in self.drones)
+            and turn_count < max_turns_limit
+        ):
             turn_count += 1
             turn_movements: List[str] = []
 
-            # 1. Track which drones are exiting which zones in this turn
-            exiting_from_zone: Dict[str, Set[int]] = {z_name: set() for z_name in self.graph.zones}
-            entering_to_zone: Dict[str, Set[int]] = {z_name: set() for z_name in self.graph.zones}
+            # 1. Track drones exiting and entering zones in this turn
+            exiting_from: Dict[str, Set[int]] = {
+                z: set() for z in self.graph.zones
+            }
+            entering_to: Dict[str, Set[int]] = {
+                z: set() for z in self.graph.zones
+            }
 
             # Phase A: Complete turn 2 for in-transit restricted zone drones
             for d in self.drones:
@@ -113,7 +127,6 @@ class SimulationEngine:
 
                 d.transit_turns_remaining -= 1
                 if d.transit_turns_remaining == 0:
-                    # Drone arrives at target restricted zone
                     target = d.target_zone
                     conn = d.connection_in_transit
                     assert target is not None
@@ -121,7 +134,7 @@ class SimulationEngine:
 
                     conn_occupancy[conn.name].remove(d.drone_id)
                     zone_occupancy[target.name].add(d.drone_id)
-                    entering_to_zone[target.name].add(d.drone_id)
+                    entering_to[target.name].add(d.drone_id)
 
                     d.current_zone = target
                     d.connection_in_transit = None
@@ -156,18 +169,16 @@ class SimulationEngine:
                     continue
 
                 # Check next zone capacity limit
-                # Drones exiting next_zone free up capacity this turn
                 curr_next_occ = len(zone_occupancy[next_zone.name])
-                exiting_next = len(exiting_from_zone[next_zone.name])
-                entering_next = len(entering_to_zone[next_zone.name])
+                exiting_next = len(exiting_from[next_zone.name])
+                entering_next = len(entering_to[next_zone.name])
 
-                effective_next_occ = curr_next_occ - exiting_next + entering_next
-
-                if effective_next_occ >= next_zone.capacity:
+                eff_occ = curr_next_occ - exiting_next + entering_next
+                if eff_occ >= next_zone.capacity:
                     continue
 
                 # Move is valid!
-                exiting_from_zone[curr_zone.name].add(d.drone_id)
+                exiting_from[curr_zone.name].add(d.drone_id)
                 zone_occupancy[curr_zone.name].remove(d.drone_id)
 
                 if next_zone.zone_type == ZoneType.RESTRICTED:
@@ -181,7 +192,7 @@ class SimulationEngine:
                 else:
                     # Single turn move (cost 1 turn)
                     zone_occupancy[next_zone.name].add(d.drone_id)
-                    entering_to_zone[next_zone.name].add(d.drone_id)
+                    entering_to[next_zone.name].add(d.drone_id)
                     d.current_zone = next_zone
                     if next_zone == self.graph.end_zone:
                         d.is_delivered = True
@@ -196,14 +207,16 @@ class SimulationEngine:
                         occ = len(zone_occupancy[z_name])
                         if occ > 0 or z_obj.max_drones > 1:
                             cap_parts.append(
-                                f"Zone {z_name}: {occ}/{z_obj.max_drones} drones"
+                                f"Zone {z_name}: {occ}/"
+                                f"{z_obj.max_drones} drones"
                             )
                 for c_obj in self.graph.connections:
                     occ = len(conn_occupancy[c_obj.name])
                     if occ > 0 or c_obj.max_link_capacity > 1:
                         c_cap = c_obj.max_link_capacity
                         cap_parts.append(
-                            f"Connection {c_obj.name}: {occ}/{c_cap} capacity used"
+                            f"Connection {c_obj.name}: {occ}/"
+                            f"{c_cap} capacity used"
                         )
                 capacity_lines.append(", ".join(cap_parts))
 

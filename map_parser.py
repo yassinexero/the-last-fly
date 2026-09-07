@@ -66,7 +66,8 @@ class MapParser:
             # 1. Parse number of drones (must be first data line)
             if line.startswith("nb_drones:"):
                 if nb_drones_found:
-                    raise MapParsingError("Duplicate nb_drones line encountered", idx)
+                    msg = "Duplicate nb_drones line encountered"
+                    raise MapParsingError(msg, idx)
                 parts = line.split(":", 1)
                 value_str = parts[1].strip()
                 try:
@@ -76,15 +77,18 @@ class MapParser:
                     graph.nb_drones = nb
                     nb_drones_found = True
                 except ValueError:
-                    raise MapParsingError(
-                        f"nb_drones must be a positive integer, got '{value_str}'", idx
+                    msg = (
+                        f"nb_drones must be a positive integer, "
+                        f"got '{value_str}'"
                     )
+                    raise MapParsingError(msg, idx)
                 continue
 
             if not nb_drones_found:
-                raise MapParsingError(
-                    "First non-comment line must define 'nb_drones: <number>'", idx
+                msg = (
+                    "First non-comment line must define 'nb_drones: <number>'"
                 )
+                raise MapParsingError(msg, idx)
 
             # 2. Parse zone definitions (start_hub:, end_hub:, hub:)
             if (
@@ -101,7 +105,8 @@ class MapParser:
                 continue
 
             # Invalid line format
-            raise MapParsingError(f"Unrecognized syntax or command: '{line}'", idx)
+            msg = f"Unrecognized syntax or command: '{line}'"
+            raise MapParsingError(msg, idx)
 
         # Validate graph requirements
         try:
@@ -112,7 +117,9 @@ class MapParser:
         return graph
 
     @staticmethod
-    def _extract_metadata(line_body: str, line_num: int) -> Tuple[str, Dict[str, str]]:
+    def _extract_metadata(
+        line_body: str, line_num: int
+    ) -> Tuple[str, Dict[str, str]]:
         """Extract metadata inside [...] from the end of a line body.
 
         Args:
@@ -132,7 +139,8 @@ class MapParser:
 
         match = re.search(r"\[(.*?)\]$", line_body)
         if not match:
-            raise MapParsingError("Malformed metadata bracket syntax", line_num)
+            msg = "Malformed metadata bracket syntax"
+            raise MapParsingError(msg, line_num)
 
         meta_str = match.group(1).strip()
         clean_body = line_body[: match.start()].strip()
@@ -141,16 +149,14 @@ class MapParser:
             tokens = meta_str.split()
             for token in tokens:
                 if "=" not in token:
-                    raise MapParsingError(
-                        f"Invalid metadata key-value token '{token}'", line_num
-                    )
+                    msg = f"Invalid metadata key-value token '{token}'"
+                    raise MapParsingError(msg, line_num)
                 key, val = token.split("=", 1)
                 key = key.strip()
                 val = val.strip()
                 if not key or not val:
-                    raise MapParsingError(
-                        f"Empty metadata key or value in '{token}'", line_num
-                    )
+                    msg = f"Empty metadata key or value in '{token}'"
+                    raise MapParsingError(msg, line_num)
                 metadata[key] = val
 
         return clean_body, metadata
@@ -177,40 +183,41 @@ class MapParser:
             prefix = "hub:"
             is_start, is_end = False, False
 
-        body = line[len(prefix) :].strip()
+        body = line[len(prefix):].strip()
         body_no_meta, meta = MapParser._extract_metadata(body, line_num)
 
         tokens = body_no_meta.split()
         if len(tokens) != 3:
-            raise MapParsingError(
-                f"Zone definition requires '<name> <x> <y>', got '{body_no_meta}'", line_num
+            msg = (
+                f"Zone definition requires '<name> <x> <y>', "
+                f"got '{body_no_meta}'"
             )
+            raise MapParsingError(msg, line_num)
 
         name, x_str, y_str = tokens[0], tokens[1], tokens[2]
 
         if "-" in name or " " in name:
-            raise MapParsingError(
-                f"Zone name '{name}' cannot contain dashes or spaces", line_num
-            )
+            msg = f"Zone name '{name}' cannot contain dashes or spaces"
+            raise MapParsingError(msg, line_num)
 
         try:
             x = int(x_str)
             y = int(y_str)
         except ValueError:
-            raise MapParsingError(
-                f"Zone coordinates must be integers, got x='{x_str}', y='{y_str}'", line_num
+            msg = (
+                f"Zone coordinates must be integers, "
+                f"got x='{x_str}', y='{y_str}'"
             )
+            raise MapParsingError(msg, line_num)
 
         # Parse metadata
         zone_type = ZoneType.NORMAL
         if "zone" in meta:
             zt_str = meta["zone"].lower()
             if zt_str not in MapParser.VALID_ZONE_TYPES:
-                raise MapParsingError(
-                    f"Invalid zone type '{zt_str}'. Must be one of: "
-                    f"{', '.join(MapParser.VALID_ZONE_TYPES.keys())}",
-                    line_num,
-                )
+                allowed = ", ".join(MapParser.VALID_ZONE_TYPES.keys())
+                msg = f"Invalid zone type '{zt_str}'. Must be: {allowed}"
+                raise MapParsingError(msg, line_num)
             zone_type = MapParser.VALID_ZONE_TYPES[zt_str]
 
         color = meta.get("color", None)
@@ -222,10 +229,9 @@ class MapParser:
                 if max_drones <= 0:
                     raise ValueError()
             except ValueError:
-                raise MapParsingError(
-                    f"max_drones must be a positive integer, got '{meta['max_drones']}'",
-                    line_num,
-                )
+                val = meta["max_drones"]
+                msg = f"max_drones must be a positive integer, got '{val}'"
+                raise MapParsingError(msg, line_num)
 
         try:
             zone = Zone(
@@ -243,7 +249,9 @@ class MapParser:
             raise MapParsingError(str(err), line_num)
 
     @staticmethod
-    def _parse_connection_line(line: str, graph: Graph, line_num: int) -> None:
+    def _parse_connection_line(
+        line: str, graph: Graph, line_num: int
+    ) -> None:
         """Parse a connection line (connection: <zone1>-<zone2> [metadata]).
 
         Args:
@@ -254,26 +262,25 @@ class MapParser:
         Raises:
             MapParsingError: On invalid syntax or connection error.
         """
-        body = line[len("connection:") :].strip()
+        body = line[len("connection:"):].strip()
         body_no_meta, meta = MapParser._extract_metadata(body, line_num)
 
         parts = body_no_meta.split("-")
         if len(parts) != 2 or not parts[0] or not parts[1]:
-            raise MapParsingError(
-                f"Connection format must be 'connection: <zone1>-<zone2>', got '{body_no_meta}'",
-                line_num,
+            msg = (
+                f"Connection format must be 'connection: <zone1>-<zone2>', "
+                f"got '{body_no_meta}'"
             )
+            raise MapParsingError(msg, line_num)
 
         z1_name, z2_name = parts[0].strip(), parts[1].strip()
 
         if z1_name not in graph.zones:
-            raise MapParsingError(
-                f"Connection references undefined zone '{z1_name}'", line_num
-            )
+            msg = f"Connection references undefined zone '{z1_name}'"
+            raise MapParsingError(msg, line_num)
         if z2_name not in graph.zones:
-            raise MapParsingError(
-                f"Connection references undefined zone '{z2_name}'", line_num
-            )
+            msg = f"Connection references undefined zone '{z2_name}'"
+            raise MapParsingError(msg, line_num)
 
         max_link_capacity = 1
         if "max_link_capacity" in meta:
@@ -283,10 +290,8 @@ class MapParser:
                     raise ValueError()
             except ValueError:
                 cap_val = meta["max_link_capacity"]
-                raise MapParsingError(
-                    f"max_link_capacity must be > 0, got '{cap_val}'",
-                    line_num,
-                )
+                msg = f"max_link_capacity must be > 0, got '{cap_val}'"
+                raise MapParsingError(msg, line_num)
 
         try:
             conn = Connection(

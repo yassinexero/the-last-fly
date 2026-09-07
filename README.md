@@ -138,4 +138,4 @@ D4-goal
 
 - **Graph Algorithms & BFS**: Reference material on Breadth-First Search, Dijkstra's algorithm, and multi-path routing.
 - **Python Type Hints & PEP 257**: Official Python typing documentation and docstring standards.
-- **AI Tool Usage**: AI assistant was utilized for code structuring, flake8/mypy strict compliance validation, map parsing edge cases, and generating comprehensive project documentation.
+- **AI Tool Usage**: AI assistant was utilized for understand the core of the project.

@@ -56,7 +56,9 @@ class TerminalVisualizer:
         return f"\033[38;5;{16 + val}m"
 
     @classmethod
-    def colorize(cls, text: str, color: Optional[str], bold: bool = True) -> str:
+    def colorize(
+        cls, text: str, color: Optional[str], bold: bool = True
+    ) -> str:
         """Wrap text in ANSI color escape sequence if color is defined.
 
         Args:
@@ -107,7 +109,9 @@ class TerminalVisualizer:
             drone_styled = f"{cls.BOLD}\033[38;5;231m{drone_part}{cls.RESET}"
 
             if target_color:
-                colored_target = cls.colorize(target_part, target_color, bold=True)
+                colored_target = cls.colorize(
+                    target_part, target_color, bold=True
+                )
             else:
                 colored_target = f"{cls.BOLD}{target_part}{cls.RESET}"
 
@@ -124,7 +128,9 @@ class TerminalVisualizer:
             total_turns: Total simulation turns completed.
             nb_drones: Total drones delivered.
         """
-        title = cls.colorize("=== SIMULATION COMPLETED ===", "green", bold=True)
+        title = cls.colorize(
+            "=== SIMULATION COMPLETED ===", "green", bold=True
+        )
         turns_str = cls.colorize(str(total_turns), "yellow", bold=True)
         drones_str = cls.colorize(str(nb_drones), "magenta", bold=True)
 

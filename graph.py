@@ -56,11 +56,13 @@ class Graph:
         z1 = connection.zone1
         z2 = connection.zone2
         if z1.name not in self.zones or z2.name not in self.zones:
-            raise ValueError(f"Connection references unknown zone: {connection.name}")
+            msg = f"Connection references unknown zone: {connection.name}"
+            raise ValueError(msg)
 
         for existing in self.connections:
             if existing.connects(z1, z2):
-                raise ValueError(f"Duplicate connection detected: {connection.name}")
+                msg = f"Duplicate connection detected: {connection.name}"
+                raise ValueError(msg)
 
         self.connections.append(connection)
         self.adj[z1].append((z2, connection))
@@ -73,11 +75,13 @@ class Graph:
             zone: Source zone.
 
         Returns:
-            List[Tuple[Zone, Connection]]: List of (neighbor_zone, connection) tuples.
+            List[Tuple[Zone, Connection]]: List of (neighbor, edge) tuples.
         """
         return self.adj.get(zone, [])
 
-    def get_connection(self, zone_a: Zone, zone_b: Zone) -> Optional[Connection]:
+    def get_connection(
+        self, zone_a: Zone, zone_b: Zone
+    ) -> Optional[Connection]:
         """Find the connection linking two zones if one exists.
 
         Args:

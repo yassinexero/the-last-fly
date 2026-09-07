@@ -1,0 +1,10 @@
+nb_drones: 2
+
+start_hub: base 0 0 [color=green]
+hub: p1 1 0 [zone=normal color=blue]
+hub: p2 2 0 [zone=normal color=blue]
+end_hub: target 3 0 [color=yellow]
+
+connection: base-p1
+connection: p1-p2
+connection: p2-target
